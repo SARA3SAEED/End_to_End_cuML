@@ -62,6 +62,11 @@ from flask import Flask, request, jsonify
 import os
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "Welcome to the fraud prediction service!"
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
     #data_path='/content/drive/MyDrive/AI/dataset/diploma/X_val.csv'
