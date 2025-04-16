@@ -4,7 +4,7 @@ import pandas as pd
 
 
 
-def predict_fraud(data_path, model_path='/content/drive/MyDrive/AI/dataset/diploma/model.pkl', scaler_path='/content/drive/MyDrive/AI/dataset/diploma/scaler.pkl'):
+def predict_fraud(data_path, model_path='model.pkl', scaler_path='scaler.pkl'):
     try:
        
 
@@ -59,7 +59,7 @@ def predict_fraud(data_path, model_path='/content/drive/MyDrive/AI/dataset/diplo
 
 
 from flask import Flask, request, jsonify
-
+import os
 app = Flask(__name__)
 
 @app.route('/predict', methods=['POST'])
@@ -72,4 +72,6 @@ def predict():
     return jsonify({'prediction': prediction})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
