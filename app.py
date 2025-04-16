@@ -1,23 +1,19 @@
 import joblib
 import pandas as pd
+from flask import Flask, request, jsonify, render_template
+import os
 
-
-
-
+# Define the function to predict fraud
 def predict_fraud(data_path, model_path='model.pkl', scaler_path='scaler.pkl'):
     try:
-       
-
-        # Load the model and scaler
+        # Load the model and scaler from the project directory
         model = joblib.load(model_path)
         model_features = model.get_booster().feature_names
         scaler = joblib.load(scaler_path)
 
-        # Read data from CSV and take the first row
+        # Read data from the uploaded CSV file
         input_df = pd.read_csv(data_path)
         input_df = input_df.iloc[[0]]  # Select only the first row for prediction
-
-        print("Input DataFrame columns:", input_df.columns)
 
         # Convert columns to categories
         input_df['gender'] = input_df['gender'].astype('category')
@@ -31,7 +27,7 @@ def predict_fraud(data_path, model_path='model.pkl', scaler_path='scaler.pkl'):
         input_df['dob'] = pd.to_datetime(input_df['dob'])
 
         # Feature engineering
-        categorical_features = ['gender', 'state','category', 'merchant']
+        categorical_features = ['gender', 'state', 'category', 'merchant']
         numerical_features = ['zip', 'city_pop', 'unix_time', 'amt']
 
         for col in categorical_features:
@@ -44,11 +40,9 @@ def predict_fraud(data_path, model_path='model.pkl', scaler_path='scaler.pkl'):
         input_df[numerical_features] = scaler.transform(input_df[numerical_features])
 
         # Align features with model input
-        print("Final input features:", input_df.columns)
-        print("Model expects:", model_features)
         input_df = input_df[model_features]
 
-        # Predict
+        # Predict using the model
         prediction = model.predict(input_df)
         return int(prediction[0])
 
@@ -56,27 +50,36 @@ def predict_fraud(data_path, model_path='model.pkl', scaler_path='scaler.pkl'):
         print(f"Error during prediction: {e}")
         return -1
 
-
-
-from flask import Flask, request, jsonify
-import os
+# Flask app setup
 app = Flask(__name__)
 
+# Home route to serve the HTML form
 @app.route('/')
 def home():
-    return "Welcome to the fraud prediction service!"
+    return render_template('index.html')  # Make sure index.html is in the 'templates' folder
 
-
+# Prediction route to handle file upload
 @app.route('/predict', methods=['POST'])
 def predict():
-    #data_path='/content/drive/MyDrive/AI/dataset/diploma/X_val.csv'
-    file = request.files['file']
-    file_path = f'/tmp/{file.filename}'
-    file.save(file_path)
-    prediction = predict_fraud(file_path)
-    return jsonify({'prediction': prediction})
+    try:
+        # Get the uploaded file
+        file = request.files['file']
+        if not file:
+            return jsonify({'error': 'No file uploaded'}), 400
+        
+        # Save the file temporarily
+        file_path = f'/tmp/{file.filename}'
+        file.save(file_path)
+
+        # Call the prediction function
+        prediction = predict_fraud(file_path)
+
+        # Return the prediction as a JSON response
+        return jsonify({'prediction': prediction})
+
+    except Exception as e:
+        return jsonify({'error': f'Error during prediction: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
